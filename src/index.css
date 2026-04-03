@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 96%;
+    --card: 222 44% 8%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 44% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 213 94% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 40% 14%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 40% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 30% 16%;
+    --input: 222 30% 18%;
+    --ring: 213 94% 58%;
+    --chart-1: 213 94% 58%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 55%;
+    --radius: 0.625rem;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 213 94% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 40% 14%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 222 30% 16%;
+    --sidebar-ring: 213 94% 58%;
+    --font-sans: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 96%;
+    --card: 222 44% 8%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 44% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 213 94% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 40% 14%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 40% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 30% 16%;
+    --input: 222 30% 18%;
+    --ring: 213 94% 58%;
+    --chart-1: 213 94% 58%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 55%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 213 94% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 40% 14%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 222 30% 16%;
+    --sidebar-ring: 213 94% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(222 47% 6%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(222 30% 20%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(222 30% 28%);
+}
+
+/* Leaflet overrides for dark/navy theme */
+.leaflet-container {
+  background: #0a0f1e !important;
+}
+.leaflet-control-zoom a {
+  background: hsl(222 44% 10%) !important;
+  color: hsl(210 40% 96%) !important;
+  border-color: hsl(222 30% 16%) !important;
+}
+.leaflet-tile-pane {
+  filter: brightness(0.85) hue-rotate(195deg) saturate(1.2);
+}

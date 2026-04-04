@@ -1,0 +1,47 @@
+{
+  "name": "Officer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "badge_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "on_patrol",
+        "responding",
+        "off_duty"
+      ],
+      "default": "available"
+    },
+    "current_zone": {
+      "type": "string",
+      "description": "Current zone in the airport"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "specialization": {
+      "type": "string",
+      "enum": [
+        "general",
+        "medical",
+        "fire",
+        "tactical",
+        "k9"
+      ],
+      "default": "general"
+    }
+  },
+  "required": [
+    "name",
+    "badge_id"
+  ]
+}

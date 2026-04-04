@@ -1,0 +1,56 @@
+{
+  "name": "Recommendation",
+  "type": "object",
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "description": "Related incident ID"
+    },
+    "action_text": {
+      "type": "string",
+      "description": "Recommended action description"
+    },
+    "predicted_outcome": {
+      "type": "string",
+      "description": "AI-predicted outcome of this action"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence score 0-100"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "feedback": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "rejected",
+        "custom_action",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "officer_notes": {
+      "type": "string",
+      "description": "Officer feedback notes"
+    },
+    "outcome_actual": {
+      "type": "string",
+      "description": "What actually happened after the action"
+    }
+  },
+  "required": [
+    "incident_id",
+    "action_text",
+    "predicted_outcome",
+    "confidence",
+    "priority"
+  ]
+}

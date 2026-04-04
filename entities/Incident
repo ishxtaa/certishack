@@ -1,0 +1,121 @@
+{
+  "name": "Incident",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short title of the incident"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the incident"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "fire_alarm",
+        "medical",
+        "intrusion",
+        "unattended_bag",
+        "panic",
+        "theft",
+        "vandalism",
+        "suspicious_behavior",
+        "access_violation",
+        "other"
+      ],
+      "description": "Type of incident"
+    },
+    "severity": {
+      "type": "number",
+      "description": "AI-computed severity score 1-10"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "responding",
+        "contained",
+        "resolved",
+        "false_alarm"
+      ],
+      "default": "active"
+    },
+    "location_name": {
+      "type": "string",
+      "description": "Name of the location within the airport"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "assigned_officer": {
+      "type": "string",
+      "description": "Name of assigned officer"
+    },
+    "alerts": {
+      "type": "array",
+      "description": "Raw alerts that triggered this incident",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "narrative": {
+      "type": "string",
+      "description": "AI-generated incident narrative"
+    },
+    "post_analysis": {
+      "type": "string",
+      "description": "Post-incident analysis report"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "officer_feedback": {
+      "type": "array",
+      "description": "Officer feedback entries for this incident",
+      "items": {
+        "type": "object",
+        "properties": {
+          "officer_name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice_transcribed"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "severity",
+    "status",
+    "location_name"
+  ]
+}

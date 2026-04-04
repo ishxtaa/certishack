@@ -7,11 +7,11 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/pages/Dashboard';
-import Recommendations from '@/pages/Recommendations';
-import Timeline from '@/pages/Timeline';
-import PatrolRoutes from '@/pages/PatrolRoutes';
-import PostAnalysis from '@/pages/PostAnalysis';
+import Dashboard from 'src/pages/dashboard';
+import Recommendations from 'src/pages/recommendations';
+import Timeline from 'src/pages/timeline';
+import PatrolRoutes from '@/pages/patrolroutes';
+import PostAnalysis from '@/pages/postanalysis';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();

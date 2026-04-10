@@ -10,6 +10,10 @@ const CHANGI_BOUNDS = [
 [1.3750, 103.9950] // NE
 ];
 
+// Type assertion helper for Leaflet coordinates
+const toLatLng = (coords) => coords;
+const toLatLngBounds = (bounds) => bounds;
+
 const SEVERITY_MARKER_COLORS = {
   critical: '#dc2626',
   high: '#f97316',
@@ -57,10 +61,10 @@ function MapEvents({ center }) {
 export default function IncidentMap({
   incidents = [],
   officers = [],
-  selectedIncident,
-  onIncidentClick,
-  patrolRoute,
-  className
+  selectedIncident = null,
+  onIncidentClick = null,
+  patrolRoute = null,
+  className = ""
 }) {
   const focusCenter = selectedIncident?.latitude && selectedIncident?.longitude ?
   [selectedIncident.latitude, selectedIncident.longitude] :
@@ -69,11 +73,11 @@ export default function IncidentMap({
   return (
     <div className="bg-transparent text-black opacity-100 rounded w-full h-full" style={{ background: '#0a0f1e' }}>
       <MapContainer
-        center={AIRPORT_CENTER}
+        center={toLatLng(AIRPORT_CENTER)}
         zoom={15}
         maxZoom={18}
         minZoom={13}
-        maxBounds={CHANGI_BOUNDS}
+        maxBounds={toLatLngBounds(CHANGI_BOUNDS)}
         maxBoundsViscosity={1.0}
         className="w-full h-full rounded-xl"
         zoomControl={false}>
@@ -138,7 +142,7 @@ export default function IncidentMap({
         {/* Patrol route */}
         {patrolRoute && patrolRoute.length > 1 &&
         <Polyline
-          positions={patrolRoute}
+          positions={patrolRoute.map(p => [p[0], p[1]])}
           pathOptions={{ color: '#60a5fa', weight: 3, dashArray: '8, 8', opacity: 0.9 }} />
 
         }

@@ -7,14 +7,14 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from 'src/pages/dashboard';
-import Recommendations from 'src/pages/recommendations';
-import Timeline from 'src/pages/timeline';
+import Dashboard from '@/pages/dashboard';
+import Recommendations from '@/pages/recommendations';
+import Timeline from '@/pages/timeline';
 import PatrolRoutes from '@/pages/patrolroutes';
 import PostAnalysis from '@/pages/postanalysis';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (

@@ -34,15 +34,30 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button"
-  return (
-    (<Comp
-      className={cn(buttonVariants({ variant, size, className }))}
-      ref={ref}
-      {...props} />)
-  );
-})
+const Button = React.forwardRef(
+  /**
+   * @param {Object} props
+   * @param {string} [props.className]
+   * @param {'default'|'destructive'|'outline'|'secondary'|'ghost'|'link'} [props.variant]
+   * @param {'default'|'sm'|'lg'|'icon'} [props.size]
+   * @param {boolean} [props.asChild]
+   * @param {React.ReactNode} [props.children]
+   * @param {(event: React.MouseEvent<HTMLButtonElement>) => void} [props.onClick]
+   * @param {boolean} [props.disabled]
+   * @param {React.Ref<any>} ref
+   */
+  function Button({ className, variant, size, asChild = false, children, ...props }, ref) {
+    const Comp = asChild ? Slot : "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}>
+        {children}
+      </Comp>
+    );
+  }
+)
 Button.displayName = "Button"
 
 export { Button, buttonVariants }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import PropTypes from 'prop-types';
+import { invokeLLM } from '@/api/openaiClient';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar,
   ResponsiveContainer, Tooltip
@@ -61,6 +62,10 @@ const CustomTooltip = ({ active, payload }) => {
   }
   return null;
 };
+CustomTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.array
+};
 
 export default function SeverityRadarPanel({ incident, allIncidents, onClose, currentUser }) {
   const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -78,7 +83,7 @@ export default function SeverityRadarPanel({ incident, allIncidents, onClose, cu
         .map(i => `Severity ${i.severity} at ${i.location_name} — ${i.status}`)
         .join('\n') || 'No past incidents of this type.';
 
-      const result = await base44.integrations.Core.InvokeLLM({
+      const result = await invokeLLM({
         prompt: `Analyze this security incident and provide a brief severity assessment (2-3 sentences max):
 Incident: ${incident.title}
 Type: ${incident.type}

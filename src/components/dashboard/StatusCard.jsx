@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-export default function StatusCard({ label, value, icon: Icon, trend, color = "primary", className }) {
+export default function StatusCard({ label, value, icon: Icon, trend = null, color = "primary", className = "" }) {
   const colorMap = {
     primary: "text-primary bg-primary/10 border-primary/20",
     red: "text-red-400 bg-red-500/10 border-red-500/20",

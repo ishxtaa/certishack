@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,11 +20,12 @@ export default function OfficerFeedback({ incident, currentUser }) {
   const feedbackList = incident.officer_feedback || [];
 
   const saveMutation = useMutation({
-    mutationFn: async (entry) => {
+    mutationFn: async (/** @type {{ officer_name: string; text: string; timestamp: string; type: string }} */ entry) => {
       const existing = incident.officer_feedback || [];
       await base44.entities.Incident.update(incident.id, {
         officer_feedback: [...existing, entry]
       });
+      return entry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
@@ -68,12 +70,9 @@ export default function OfficerFeedback({ incident, currentUser }) {
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
     const file = new File([blob], 'voice_feedback.webm', { type: 'audio/webm' });
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: 'Transcribe the following audio recording from a security officer providing incident feedback. Return the full transcription as plain text.',
-        file_urls: [file_url]
-      });
-      const transcription = typeof result === 'string' ? result : result.transcription || 'Could not transcribe audio.';
+      // Note: Audio transcription via file upload not supported in OpenAI direct integration
+      // Using a placeholder message for now
+      const transcription = '[Voice transcription not available - OpenAI integration mode]';
       saveMutation.mutate({
         officer_name: currentUser?.full_name || 'Officer',
         text: transcription,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import IncidentMap from '@/components/map/IncidentMap';
 import { Button } from '@/components/ui/button';
@@ -73,7 +74,7 @@ export default function PatrolRoutes() {
       .map(i => `${i.location_name} (${i.latitude}, ${i.longitude}) severity: ${i.severity}`)
       .join('\n');
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await invokeLLM({
       prompt: `Generate an optimized patrol route for a security officer at an airport.
 
 Officer: ${selectedOfficer.name}
@@ -129,7 +130,7 @@ STRICT PRIORITIZATION RULES:
       return;
     }
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await invokeLLM({
       prompt: `Choose the best officer to assign to this incident:
 Incident: ${incident.title} (${incident.type}, severity ${incident.severity})
 Location: ${incident.location_name}

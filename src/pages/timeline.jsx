@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge, StatusBadge } from '@/components/dashboard/IncidentBadge';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ function TimelineItem({ incident, index }) {
     setGenerating(true);
     const alertsSummary = incident.alerts?.map(a => `[${a.source}] ${a.message}`).join('\n') || 'No raw alerts available';
     
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await invokeLLM({
       prompt: `You are a security operations analyst. Convert these alerts into a clear, concise incident narrative for security officers. Explain WHY this is happening and WHAT the situation is in simple language. Keep it under 100 words.
 
 Incident: ${incident.title}

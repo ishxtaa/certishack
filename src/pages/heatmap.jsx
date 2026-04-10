@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge, StatusBadge } from '@/components/dashboard/IncidentBadge';
 import { AIRPORT_ZONES, INCIDENT_TYPES, getSeverityLevel, getSeverityColor } from '@/lib/securityUtils';
@@ -100,7 +101,7 @@ export default function Heatmap() {
       .map(i => `Type: ${i.type}, Severity: ${i.severity}, Location: ${i.location_name}`)
       .join('\n');
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await invokeLLM({
       prompt: `As a security AI, compute a severity score (1-10) for this incident based on these factors:
 - Type: ${incident.type} (danger to life > danger to property; fire/panic/medical = highest)
 - Location: ${incident.location_name} (high-traffic areas = more severe)

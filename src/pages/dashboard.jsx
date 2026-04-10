@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from 'src/api/base44Client';
-import TopBar from 'src/components/layout/TopBar';
-import StatusCard from 'src/components/dashboard/StatusCard';
-import LiveFeed from 'src/components/dashboard/LiveFeed';
-import SeverityChart from 'src/components/dashboard/SeverityChart';
-import IncidentMap from 'src/components/map/IncidentMap';
-import SeverityRadarPanel from 'src/components/dashboard/SeverityRadarPanel';
+import { base44 } from '@/api/base44Client';
+import TopBar from '@/components/layout/TopBar';
+import StatusCard from '@/components/dashboard/StatusCard';
+import LiveFeed from '@/components/dashboard/LiveFeed';
+import SeverityChart from '@/components/dashboard/SeverityChart';
+import IncidentMap from '@/components/map/IncidentMap';
+import SeverityRadarPanel from '@/components/dashboard/SeverityRadarPanel';
 import { AlertTriangle, ShieldCheck, Users, Activity } from 'lucide-react';
 
 export default function Dashboard() {

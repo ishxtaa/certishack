@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge } from '@/components/dashboard/IncidentBadge';
 import OfficerFeedback from '@/components/dashboard/OfficerFeedback';
@@ -188,7 +189,7 @@ export default function Recommendations() {
     map((r) => `Action: ${r.action_text} → Feedback: ${r.feedback}`).
     join('\n');
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await invokeLLM({
       prompt: `You are a security operations AI for an airport. Generate 3 tactical recommendations for this incident:
       
 Incident: ${incident.title}

@@ -182,15 +182,16 @@ export default function Recommendations() {
       return;
     }
     setGenerating(true);
-    const incident = incidents.find((i) => i.id === selectedIncidentId);
-    const pastFeedback = recommendations.
-    filter((r) => r.feedback !== 'pending').
-    slice(0, 5).
-    map((r) => `Action: ${r.action_text} → Feedback: ${r.feedback}`).
-    join('\n');
+    try {
+      const incident = incidents.find((i) => i.id === selectedIncidentId);
+      const pastFeedback = recommendations.
+      filter((r) => r.feedback !== 'pending').
+      slice(0, 5).
+      map((r) => `Action: ${r.action_text} → Feedback: ${r.feedback}`).
+      join('\n');
 
-    const result = await invokeLLM({
-      prompt: `You are a security operations AI for an airport. Generate 3 tactical recommendations for this incident:
+      const result = await invokeLLM({
+        prompt: `You are a security operations AI for an airport. Generate 3 tactical recommendations for this incident:
       
 Incident: ${incident.title}
 Type: ${incident.type}
@@ -206,37 +207,46 @@ For each recommendation provide:
 - predicted_outcome: what will happen if they take this action
 - confidence: a number 1-100
 - priority: critical/high/medium/low`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          recommendations: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                action_text: { type: "string" },
-                predicted_outcome: { type: "string" },
-                confidence: { type: "number" },
-                priority: { type: "string" }
+        response_json_schema: {
+          type: "object",
+          properties: {
+            recommendations: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  action_text: { type: "string" },
+                  predicted_outcome: { type: "string" },
+                  confidence: { type: "number" },
+                  priority: { type: "string" }
+                }
               }
             }
           }
         }
-      }
-    });
+      });
 
-    if (result.recommendations) {
-      for (const rec of result.recommendations) {
-        await base44.entities.Recommendation.create({
-          ...rec,
-          incident_id: selectedIncidentId,
-          feedback: 'pending'
-        });
+      const recs = result?.recommendations || (Array.isArray(result) ? result : null);
+      if (recs && recs.length > 0) {
+        for (const rec of recs) {
+          await base44.entities.Recommendation.create({
+            ...rec,
+            incident_id: selectedIncidentId,
+            feedback: 'pending'
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+        toast.success('New recommendations generated');
+      } else {
+        toast.error('AI returned no recommendations. Try again.');
+        console.error('AI result:', result);
       }
-      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
-      toast.success('New recommendations generated');
+    } catch (err) {
+      console.error('Generate recommendations error:', err);
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
   };
 
   return (

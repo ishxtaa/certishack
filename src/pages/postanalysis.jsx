@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { generatePostAnalysisAI } from '@/api/aiClient';
+import { invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge, StatusBadge } from '@/components/dashboard/IncidentBadge';
 import { Button } from '@/components/ui/button';
@@ -37,41 +37,52 @@ export default function PostAnalysis() {
     setAnalysis(inc.post_analysis || null);
   };
 
- const generateAnalysis = async () => {
-  if (!selectedIncident) return;
-  setGenerating(true);
+  const generateAnalysis = async () => {
+    if (!selectedIncident) return;
+    setGenerating(true);
 
-  try {
-    const incRecs = recommendations.filter((r) => r.incident_id === selectedIncident.id);
+    const incRecs = recommendations.filter(r => r.incident_id === selectedIncident.id);
+    const recsText = incRecs.map(r => 
+      `- Action: ${r.action_text}\n  Outcome predicted: ${r.predicted_outcome}\n  Officer feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`
+    ).join('\n');
 
-    const recsText = incRecs
-      .map(
-        (r) =>
-          `- Action: ${r.action_text}\n  Outcome predicted: ${r.predicted_outcome}\n  Officer feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`
-      )
-      .join('\n');
+    const result = await invokeLLM({
+      prompt: `You are a security training analyst. Create a comprehensive post-incident analysis report for training purposes.
 
-    const result = await generatePostAnalysisAI(selectedIncident, recsText);
-    const analysisText = result?.analysis || result?.response;
+Incident: ${selectedIncident.title}
+Type: ${selectedIncident.type}
+Severity: ${selectedIncident.severity}/10
+Location: ${selectedIncident.location_name}
+Status: ${selectedIncident.status}
+Description: ${selectedIncident.description || 'N/A'}
+Narrative: ${selectedIncident.narrative || 'N/A'}
 
-    if (!analysisText) {
-      throw new Error('AI returned no analysis text');
-    }
+AI Recommendations & Officer Feedback:
+${recsText || 'No recommendations recorded'}
 
-    setAnalysis(analysisText);
+Generate the report in markdown with these sections:
+1. **Incident Summary** - What happened
+2. **Response Analysis** - How the response went, what worked/didn't
+3. **Key Learnings** - Tactical lessons for future incidents
+4. **Training Recommendations** - Specific drills or procedures to practice
+5. **Protocol Improvements** - Suggested changes to SOPs
 
-    await base44.entities.Incident.update(selectedIncident.id, {
-      post_analysis: analysisText,
+Keep it concise but actionable for training purposes.`,
+      response_json_schema: {
+        type: "object",
+        properties: {
+          analysis: { type: "string" }
+        }
+      }
     });
 
-    toast.success('Analysis generated');
-  } catch (err) {
-    console.error('Generate analysis error:', err);
-    toast.error(err.message || 'Failed to generate analysis');
-  } finally {
+    if (result.analysis) {
+      setAnalysis(result.analysis);
+      await base44.entities.Incident.update(selectedIncident.id, { post_analysis: result.analysis });
+      toast.success('Analysis generated');
+    }
     setGenerating(false);
-  }
-};
+  };
 
   return (
     <div className="flex flex-col h-full">

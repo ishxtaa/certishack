@@ -5,6 +5,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     react(),
+    // Note: @base44/vite-plugin removed — no longer needed
   ],
   optimizeDeps: {
     esbuildOptions: {

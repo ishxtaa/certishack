@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { generateRecommendationsAI } from '@/api/aiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge } from '@/components/dashboard/IncidentBadge';
 import OfficerFeedback from '@/components/dashboard/OfficerFeedback';
@@ -176,78 +176,51 @@ export default function Recommendations() {
     toast.success(`Recommendation ${feedback}`);
   };
 
-  const generateRecs = async () => {
-    if (!selectedIncidentId) {
-      toast.error('Select an incident first');
+ const generateRecs = async () => {
+  if (!selectedIncidentId) {
+    toast.error('Select an incident first');
+    return;
+  }
+
+  setGenerating(true);
+
+  try {
+    const incident = incidents.find((i) => i.id === selectedIncidentId);
+
+    const pastFeedback = recommendations
+      .filter((r) => r.feedback !== 'pending')
+      .slice(0, 5)
+      .map((r) => `Action: ${r.action_text} → Feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`)
+      .join('\n');
+
+    const result = await generateRecommendationsAI(incident, pastFeedback);
+    const recs = result?.recommendations || [];
+
+    if (!Array.isArray(recs) || recs.length === 0) {
+      toast.error('AI returned no recommendations. Try again.');
       return;
     }
-    setGenerating(true);
-    try {
-      const incident = incidents.find((i) => i.id === selectedIncidentId);
-      const pastFeedback = recommendations.
-      filter((r) => r.feedback !== 'pending').
-      slice(0, 5).
-      map((r) => `Action: ${r.action_text} → Feedback: ${r.feedback}`).
-      join('\n');
 
-      const result = await invokeLLM({
-        prompt: `You are a security operations AI for an airport. Generate 3 tactical recommendations for this incident:
-      
-Incident: ${incident.title}
-Type: ${incident.type}
-Severity: ${incident.severity}/10
-Location: ${incident.location_name}
-Description: ${incident.description || 'N/A'}
-
-Past officer feedback on recommendations:
-${pastFeedback || 'No prior feedback'}
-
-For each recommendation provide:
-- action_text: specific tactical action (2-3 sentences)
-- predicted_outcome: what will happen if they take this action
-- confidence: a number 1-100
-- priority: critical/high/medium/low`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            recommendations: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  action_text: { type: "string" },
-                  predicted_outcome: { type: "string" },
-                  confidence: { type: "number" },
-                  priority: { type: "string" }
-                }
-              }
-            }
-          }
-        }
+    for (const rec of recs.slice(0, 3)) {
+      await base44.entities.Recommendation.create({
+        incident_id: selectedIncidentId,
+        action_text: rec.action_text,
+        predicted_outcome: rec.predicted_outcome,
+        confidence: Math.max(1, Math.min(100, Number(rec.confidence) || 70)),
+        priority: ['critical', 'high', 'medium', 'low'].includes(rec.priority) ? rec.priority : 'medium',
+        feedback: 'pending',
       });
-
-      const recs = result?.recommendations || (Array.isArray(result) ? result : null);
-      if (recs && recs.length > 0) {
-        for (const rec of recs) {
-          await base44.entities.Recommendation.create({
-            ...rec,
-            incident_id: selectedIncidentId,
-            feedback: 'pending'
-          });
-        }
-        queryClient.invalidateQueries({ queryKey: ['recommendations'] });
-        toast.success('New recommendations generated');
-      } else {
-        toast.error('AI returned no recommendations. Try again.');
-        console.error('AI result:', result);
-      }
-    } catch (err) {
-      console.error('Generate recommendations error:', err);
-      toast.error(`Failed: ${err.message}`);
-    } finally {
-      setGenerating(false);
     }
-  };
+
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    toast.success('New recommendations generated');
+  } catch (err) {
+    console.error('Generate recommendations error:', err);
+    toast.error(`Failed: ${err.message}`);
+  } finally {
+    setGenerating(false);
+  }
+};
 
   return (
     <div className="flex flex-col h-full">

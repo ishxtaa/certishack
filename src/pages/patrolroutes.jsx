@@ -70,7 +70,7 @@ export default function PatrolRoutes() {
 
     // Build incident list with IDs so we can look up real coordinates after
     const incidentsWithCoords = activeIncidents.filter(i => i.latitude && i.longitude);
-    const incidentList = incidentsWithCoords
+    const incidentLocations = incidentsWithCoords
       .map(i => `ID: ${i.id} | ${i.location_name} (${i.latitude}, ${i.longitude}) severity: ${i.severity}`)
       .join('\n');
 

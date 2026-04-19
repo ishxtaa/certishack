@@ -12,9 +12,21 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings] = useState({});
 
   useEffect(() => {
-    // Clear tokens on app start to always show login page first
-    localStorage.removeItem('token');
-    localStorage.removeItem('certis_token');
+    // Check if this is a new browser session (not a refresh)
+    const isNewSession = !sessionStorage.getItem('app_session');
+    
+    if (isNewSession) {
+      // First time opening app - clear tokens and show login
+      localStorage.removeItem('token');
+      localStorage.removeItem('certis_token');
+      sessionStorage.setItem('app_session', 'true');
+    } else {
+      // Refresh - check if user was logged in
+      const token = localStorage.getItem('token') || localStorage.getItem('certis_token');
+      if (token) {
+        checkUserAuth();
+      }
+    }
   }, []);
 
   const checkUserAuth = async () => {

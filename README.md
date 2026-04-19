@@ -39,8 +39,6 @@ A real-time security operations dashboard for *airport* environments, featuring 
 
 ## Getting Started
 
-### Option 1: Using start.bat (Windows)
-
 1. Clone the repository:
    ```bash
    git clone <your-repo-url>
@@ -66,26 +64,19 @@ A real-time security operations dashboard for *airport* environments, featuring 
    VITE_GROQ_API_KEY=your_groq_api_key_here
    ```
 
-5. Run the application:
+5. Start the backend:
    ```bash
-   .\start.bat
+   cd backend
+   venv\Scripts\activate
+   uvicorn main:app --reload --port 8000
    ```
 
-   This will start both backend (port 8000) and frontend (port 5173).
+6. In a new terminal, start the frontend:
+   ```bash
+   npm run dev
+   ```
 
-### Option 2: Manual Start
-
-**Terminal 1 — Backend:**
-```bash
-cd backend
-venv\Scripts\activate
-uvicorn main:app --reload --port 8000
-```
-
-**Terminal 2 — Frontend:**
-```bash
-npm run dev
-```
+The app will be available at `http://localhost:5173`.
 
 ---
 
@@ -115,7 +106,6 @@ certishack/
 │       ├── patrolroutes.jsx # Patrol management
 │       ├── postanalysis.jsx # Post-incident AI reports
 │       └── login.jsx        # Login page
-├── start.bat               # Windows startup script
 └── README.md
 ```
 

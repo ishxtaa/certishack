@@ -1,20 +1,20 @@
-# CertisHack — Airport Security Command Platform
+# Sentinel: Airport Security Command Platform
 
 Built for the NAISC Certis Hackathon.
 
-A real-time security operations dashboard for airport environments, featuring AI-powered tactical recommendations, incident management, patrol routing, voice feedback, and post-incident analysis.
+A real-time security operations dashboard for *airport* environments, featuring AI-powered tactical recommendations, incident management, patrol routing, voice feedback, and post-incident analysis. It is designed to help group officers optimise their resources and target incidents more effectively.
 
 ---
 
 ## Features
 
-- **Command Center** — Live incident feed, interactive map, officer tracking, severity analytics
-- **AI Recommendations** — Context-aware tactical recommendations powered by Groq AI (llama-3.1-8b-instant)
-- **Voice Feedback** — Officers can record voice notes that are automatically transcribed to text using Groq Whisper API
-- **Text-to-Speech** — Listen to recommendations and feedback aloud
-- **Timeline** — Chronological incident history and audit trail
-- **Patrol Routes** — Officer assignment and patrol management with AI-optimized routing
-- **Post-Incident Analysis** — AI-generated training reports for resolved incidents
+- **Command Centre**: Live incident feed, interactive map, officer tracking, severity analytics
+- **AI Recommendations**: Context-aware tactical recommendations powered by Groq AI 
+- **Voice Feedback**: Officers can record voice notes that are automatically transcribed to text using Groq Whisper API
+- **Text-to-Speech**:Listen to recommendations and feedback aloud
+- **Timeline**: Chronological incident history and audit trail
+- **Patrol Routes**:Officer assignment and patrol management with AI-optimised routing
+- **Post-Incident Analysis**: AI-generated training reports for resolved incidents
 
 ---
 
@@ -139,7 +139,7 @@ Officers can now record voice feedback on recommendations:
 
 1. Click **Voice Note** button on any recommendation
 2. Speak your observation
-3. Click **Stop** — the audio is automatically transcribed using Groq Whisper API
+3. Click **Stop**: the audio is automatically transcribed using Groq Whisper API
 4. The transcribed text is saved to that specific recommendation
 5. Click the **speaker icon** to listen to any feedback aloud
 
@@ -160,7 +160,7 @@ Officers can now record voice feedback on recommendations:
 | `npm run build` | Build for production |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix lint issues |
+
 
 ---
 
@@ -182,4 +182,4 @@ The backend provides RESTful APIs:
 
 ## License
 
-Built for NAISC Certis Hackathon 2025.
+Built for NAISC Certis Hackathon 2026.

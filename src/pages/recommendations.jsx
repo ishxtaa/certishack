@@ -33,13 +33,8 @@ function speakText(text) {
 
 // ─── Recommendation Card ───────────────────────────────────────────────────
 function RecommendationCard({ rec, incident, currentUser, onFeedback }) {
-  const [notes, setNotes] = useState('');
-  const [showNotes, setShowNotes] = useState(false);
-
   const handleAction = (action) => {
-    onFeedback(rec.id, action, notes);
-    setShowNotes(false);
-    setNotes('');
+    onFeedback(rec.id, action, '');
   };
 
   return (
@@ -96,25 +91,7 @@ function RecommendationCard({ rec, incident, currentUser, onFeedback }) {
             <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleAction('rejected')}>
               <XCircle className="w-3.5 h-3.5 mr-1.5" /> Reject
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowNotes(!showNotes)}>
-              <MessageSquare className="w-3.5 h-3.5" />
-            </Button>
           </div>
-          <AnimatePresence>
-            {showNotes && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                <Textarea
-                  placeholder="Add notes or custom action..."
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  className="text-xs bg-secondary/50 h-20"
-                />
-                <Button size="sm" className="mt-2 w-full" variant="outline" onClick={() => handleAction('custom_action')}>
-                  Submit Custom Action
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       ) : (
         <div className={cn(
@@ -127,14 +104,13 @@ function RecommendationCard({ rec, incident, currentUser, onFeedback }) {
            rec.feedback === 'rejected' ? <XCircle className="w-3.5 h-3.5" /> :
            <MessageSquare className="w-3.5 h-3.5" />}
           {rec.feedback === 'accepted' ? 'Action Accepted' :
-           rec.feedback === 'rejected' ? 'Action Rejected' : 'Custom Action Taken'}
-          {rec.officer_notes && <span className="text-muted-foreground ml-2">— {rec.officer_notes}</span>}
+           rec.feedback === 'rejected' ? 'Action Rejected' : 'Pending'}
         </div>
       )}
 
       {incident && (
         <div className="border-t border-border pt-4">
-          <OfficerFeedback incident={incident} currentUser={currentUser} />
+          <OfficerFeedback recommendation={rec} currentUser={currentUser} />
         </div>
       )}
     </motion.div>

@@ -2,17 +2,18 @@
 
 Built for the NAISC Certis Hackathon.
 
-A real-time security operations dashboard for airport environments, featuring AI-powered tactical recommendations, incident management, patrol routing, and post-incident analysis.
+A real-time security operations dashboard for airport environments, featuring AI-powered tactical recommendations, incident management, patrol routing, voice feedback, and post-incident analysis.
 
 ---
 
 ## Features
 
 - **Command Center** — Live incident feed, interactive map, officer tracking, severity analytics
-- **AI Recommendations** — Context-aware tactical recommendations powered by Pollinations.AI (free, no API key required), with support for live sensor dataset input
-- **Sensor Dataset Input** — Inject real-time sensor readings (crowd density, environmental, perimeter, passenger flow) to make AI recommendations data-driven
+- **AI Recommendations** — Context-aware tactical recommendations powered by Groq AI (llama-3.1-8b-instant)
+- **Voice Feedback** — Officers can record voice notes that are automatically transcribed to text using Groq Whisper API
+- **Text-to-Speech** — Listen to recommendations and feedback aloud
 - **Timeline** — Chronological incident history and audit trail
-- **Patrol Routes** — Officer assignment and patrol management
+- **Patrol Routes** — Officer assignment and patrol management with AI-optimized routing
 - **Post-Incident Analysis** — AI-generated training reports for resolved incidents
 
 ---
@@ -20,21 +21,25 @@ A real-time security operations dashboard for airport environments, featuring AI
 ## Tech Stack
 
 - **Frontend:** React 18, Vite, Tailwind CSS, shadcn/ui, Framer Motion
+- **Backend:** FastAPI, SQLite, Python 3.12
 - **Data fetching:** TanStack Query
-- **AI:** [Pollinations.AI](https://pollinations.ai) — free, no API key needed
-- **Backend:** FastAPI (separate repo) — proxied via `/api`
+- **AI:** Groq API (llama-3.1-8b-instant for chat, whisper-large-v3 for transcription)
 - **Maps:** React Leaflet
+- **Auth:** JWT with SHA256 password hashing
 
 ---
 
 ## Prerequisites
 
 - Node.js 18+
-- A running instance of the CertisHack FastAPI backend on `http://localhost:8000`
+- Python 3.12+
+- Groq API key (get free at https://console.groq.com/keys)
 
 ---
 
 ## Getting Started
+
+### Option 1: Using start.bat (Windows)
 
 1. Clone the repository:
    ```bash
@@ -42,35 +47,108 @@ A real-time security operations dashboard for airport environments, featuring AI
    cd certishack
    ```
 
-2. Install dependencies:
+2. Install frontend dependencies:
    ```bash
    npm install
    ```
 
-3. Create a `.env.local` file and configure the backend URL:
-   ```env
-   VITE_API_BASE_URL=http://localhost:8000
-   ```
-
-4. Start the development server:
+3. Set up backend virtual environment:
    ```bash
-   npm run dev
+   cd backend
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   cd ..
    ```
 
-   The app will be available at `http://localhost:5173`.
+4. Create a `.env` file in the root with your Groq API key:
+   ```env
+   VITE_GROQ_API_KEY=your_groq_api_key_here
+   ```
+
+5. Run the application:
+   ```bash
+   .\start.bat
+   ```
+
+   This will start both backend (port 8000) and frontend (port 5173).
+
+### Option 2: Manual Start
+
+**Terminal 1 — Backend:**
+```bash
+cd backend
+venv\Scripts\activate
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 — Frontend:**
+```bash
+npm run dev
+```
 
 ---
 
-## Sensor Dataset Input
+## Project Structure
 
-On the **AI Recommendations** page, expand the **Sensor Dataset Input** panel to feed live sensor readings into the AI engine. Readings are sent as structured context alongside the incident data, producing more specific and actionable recommendations.
+```
+certishack/
+├── backend/                  # FastAPI backend
+│   ├── main.py              # FastAPI app with Groq integration
+│   ├── requirements.txt     # Python dependencies
+│   └── certis.db           # SQLite database
+├── src/
+│   ├── api/
+│   │   └── openaiClient.js  # REST client for backend & Groq API
+│   ├── components/
+│   │   ├── dashboard/       # StatusCard, LiveFeed, SeverityChart, OfficerFeedback
+│   │   ├── layout/          # AppLayout, Sidebar, TopBar
+│   │   ├── map/             # IncidentMap (Leaflet)
+│   │   └── ui/              # shadcn/ui component library
+│   ├── lib/
+│   │   ├── AuthContext.js   # Auth state & login/logout
+│   │   └── securityUtils.js # Shared security utilities
+│   └── pages/
+│       ├── dashboard.jsx    # Command Center
+│       ├── recommendations.jsx  # AI Recommendations
+│       ├── timeline.jsx     # Incident timeline
+│       ├── patrolroutes.jsx # Patrol management
+│       ├── postanalysis.jsx # Post-incident AI reports
+│       └── login.jsx        # Login page
+├── start.bat               # Windows startup script
+└── README.md
+```
 
-**Input methods:**
-- **Quick Presets** — one-click load for common sensor categories (Crowd Density, Environmental, Perimeter, Passenger Flow)
-- **Manual entry** — add individual `key: value` sensor fields
-- **CSV import** — paste rows in `key,value` format to bulk-import from any monitoring system
+---
 
-Each generated recommendation will include a **sensor context note** indicating which readings influenced it.
+## Environment Variables
+
+Create a `.env` file in the root directory:
+
+| Variable | Description | Required |
+|---|---|---|
+| `VITE_GROQ_API_KEY` | Groq API key for AI features | Yes |
+
+Get your free API key at: https://console.groq.com/keys
+
+---
+
+## Voice Feedback Feature
+
+Officers can now record voice feedback on recommendations:
+
+1. Click **Voice Note** button on any recommendation
+2. Speak your observation
+3. Click **Stop** — the audio is automatically transcribed using Groq Whisper API
+4. The transcribed text is saved to that specific recommendation
+5. Click the **speaker icon** to listen to any feedback aloud
+
+---
+
+## Default Login
+
+- **Email:** admin@certis.local
+- **Password:** admin123
 
 ---
 
@@ -86,37 +164,22 @@ Each generated recommendation will include a **sensor context note** indicating 
 
 ---
 
-## Environment Variables
+## API Endpoints
 
-| Variable | Description | Default |
-|---|---|---|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:8000` |
+The backend provides RESTful APIs:
 
-No AI API keys are required — the app uses [Pollinations.AI](https://text.pollinations.ai) which is free and open.
+- `GET /incidents` — List all incidents
+- `POST /incidents` — Create new incident
+- `PATCH /incidents/{id}` — Update incident
+- `GET /recommendations` — List AI recommendations
+- `POST /recommendations/generate` — Generate new recommendations
+- `PATCH /recommendations/{id}` — Update recommendation feedback
+- `GET /officers` — List all officers
+- `POST /auth/login` — User login
+- `POST /auth/register` — User registration
 
 ---
 
-## Project Structure
+## License
 
-```
-src/
-├── api/
-│   ├── base44Client.js     # REST client for backend entities & auth
-│   └── openaiClient.js     # LLM client (Pollinations.AI, free)
-├── components/
-│   ├── dashboard/          # StatusCard, LiveFeed, SeverityChart, etc.
-│   ├── layout/             # AppLayout, Sidebar, TopBar
-│   ├── map/                # IncidentMap (Leaflet)
-│   └── ui/                 # shadcn/ui component library
-├── lib/
-│   ├── AuthContext.jsx      # Auth state & login/logout
-│   └── securityUtils.js    # Shared security utilities
-├── pages/
-│   ├── dashboard.jsx        # Command Center
-│   ├── recommendations.jsx  # AI Recommendations + Sensor Input
-│   ├── timeline.jsx         # Incident timeline
-│   ├── patrolroutes.jsx     # Patrol management
-│   ├── postanalysis.jsx     # Post-incident AI reports
-│   └── login.jsx            # Login page
-└── App.jsx
-```
+Built for NAISC Certis Hackathon 2025.

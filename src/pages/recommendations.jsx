@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Brain, CheckCircle, XCircle, MessageSquare,
-  TrendingUp, Loader2, Sparkles, RefreshCw, Volume2,
-  Cpu, ChevronDown, ChevronUp, Upload, Trash2, Plus
+  TrendingUp, Loader2, Sparkles, RefreshCw, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -23,35 +22,6 @@ const PRIORITY_COLORS = {
   low: 'bg-green-500/15 text-green-400 border-green-500/30'
 };
 
-// Sensor field presets for common airport security sensors
-const SENSOR_PRESETS = {
-  'Crowd Density': {
-    crowd_density_pct: '72',
-    zone: 'Terminal B Gate 12',
-    pedestrian_flow_per_min: '145',
-    congestion_level: 'high'
-  },
-  'Environmental': {
-    temperature_c: '28',
-    humidity_pct: '65',
-    smoke_detected: 'false',
-    co2_ppm: '820',
-    noise_db: '74'
-  },
-  'Perimeter': {
-    fence_breach_detected: 'false',
-    camera_coverage_pct: '94',
-    motion_alerts_last_5min: '3',
-    restricted_zone_intrusions: '1'
-  },
-  'Passenger Flow': {
-    queue_length_security: '87',
-    avg_wait_time_min: '22',
-    throughput_per_hour: '340',
-    anomalous_behavior_flags: '2'
-  }
-};
-
 function speakText(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -59,183 +29,6 @@ function speakText(text) {
   utterance.rate = 0.95;
   utterance.pitch = 1;
   window.speechSynthesis.speak(utterance);
-}
-
-// ─── Sensor Input Panel ────────────────────────────────────────────────────
-function SensorPanel({ sensorData, onSensorDataChange }) {
-  const [expanded, setExpanded] = useState(false);
-  const [csvText, setCsvText] = useState('');
-  const [newKey, setNewKey] = useState('');
-  const [newValue, setNewValue] = useState('');
-
-  const applyPreset = (presetName) => {
-    onSensorDataChange({ ...sensorData, ...SENSOR_PRESETS[presetName] });
-    toast.success(`Loaded "${presetName}" sensor preset`);
-  };
-
-  const addField = () => {
-    if (!newKey.trim()) return;
-    onSensorDataChange({ ...sensorData, [newKey.trim()]: newValue.trim() });
-    setNewKey('');
-    setNewValue('');
-  };
-
-  const removeField = (key) => {
-    const updated = { ...sensorData };
-    delete updated[key];
-    onSensorDataChange(updated);
-  };
-
-  const updateField = (key, value) => {
-    onSensorDataChange({ ...sensorData, [key]: value });
-  };
-
-  const importCsv = () => {
-    try {
-      const parsed = {};
-      csvText.split('\n').forEach(line => {
-        const [k, ...rest] = line.split(',');
-        if (k && rest.length) parsed[k.trim()] = rest.join(',').trim();
-      });
-      if (Object.keys(parsed).length === 0) {
-        toast.error('No valid key,value rows found in CSV');
-        return;
-      }
-      onSensorDataChange({ ...sensorData, ...parsed });
-      setCsvText('');
-      toast.success(`Imported ${Object.keys(parsed).length} sensor readings`);
-    } catch {
-      toast.error('Failed to parse CSV. Use format: key,value per line');
-    }
-  };
-
-  const hasData = Object.keys(sensorData).length > 0;
-
-  return (
-    <div className="border border-border rounded-xl bg-card/50 overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Sensor Dataset Input
-          </span>
-          {hasData && (
-            <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
-              {Object.keys(sensorData).length} readings active
-            </Badge>
-          )}
-        </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-      </button>
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-t border-border"
-          >
-            <div className="p-4 space-y-4">
-              {/* Presets */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Quick Presets</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.keys(SENSOR_PRESETS).map(name => (
-                    <button
-                      key={name}
-                      onClick={() => applyPreset(name)}
-                      className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-secondary/40 hover:bg-secondary hover:border-primary/30 transition-all"
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Current sensor readings table */}
-              {hasData && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Active Readings</p>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {Object.entries(sensorData).map(([key, value]) => (
-                      <div key={key} className="flex items-center gap-2 group">
-                        <span className="text-[11px] font-mono text-muted-foreground w-40 truncate shrink-0">{key}</span>
-                        <input
-                          value={value}
-                          onChange={e => updateField(key, e.target.value)}
-                          className="flex-1 text-[11px] font-mono bg-secondary/50 border border-border rounded px-2 py-1 focus:outline-none focus:border-primary/40"
-                        />
-                        <button
-                          onClick={() => removeField(key)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Manual add field */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Add Reading</p>
-                <div className="flex gap-2">
-                  <input
-                    value={newKey}
-                    onChange={e => setNewKey(e.target.value)}
-                    placeholder="sensor_name"
-                    className="flex-1 text-[11px] font-mono bg-secondary/50 border border-border rounded px-2 py-1.5 focus:outline-none focus:border-primary/40"
-                    onKeyDown={e => e.key === 'Enter' && addField()}
-                  />
-                  <input
-                    value={newValue}
-                    onChange={e => setNewValue(e.target.value)}
-                    placeholder="value"
-                    className="flex-1 text-[11px] font-mono bg-secondary/50 border border-border rounded px-2 py-1.5 focus:outline-none focus:border-primary/40"
-                    onKeyDown={e => e.key === 'Enter' && addField()}
-                  />
-                  <button
-                    onClick={addField}
-                    className="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* CSV import */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">CSV Import (key,value per line)</p>
-                <Textarea
-                  value={csvText}
-                  onChange={e => setCsvText(e.target.value)}
-                  placeholder={"crowd_density_pct,72\ntemperature_c,28\nsmoke_detected,false"}
-                  className="text-[11px] font-mono bg-secondary/50 h-20 mb-2"
-                />
-                <Button size="sm" variant="outline" onClick={importCsv} className="gap-1.5 text-xs">
-                  <Upload className="w-3.5 h-3.5" /> Import CSV
-                </Button>
-              </div>
-
-              {hasData && (
-                <button
-                  onClick={() => onSensorDataChange({})}
-                  className="text-[11px] text-muted-foreground hover:text-red-400 transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-3 h-3" /> Clear all sensor data
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
 }
 
 // ─── Recommendation Card ───────────────────────────────────────────────────
@@ -353,7 +146,6 @@ export default function Recommendations() {
   const queryClient = useQueryClient();
   const [generating, setGenerating] = useState(false);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
-  const [sensorData, setSensorData] = useState({});
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
@@ -391,7 +183,6 @@ export default function Recommendations() {
     toast.success(`Recommendation ${feedback}`);
   };
 
-  const hasSensorData = Object.keys(sensorData).length > 0;
   const [lastRequestTime, setLastRequestTime] = useState(0);
 
   const generateRecs = async () => {
@@ -417,13 +208,8 @@ export default function Recommendations() {
         .map(r => `Action: ${r.action_text} → Feedback: ${r.feedback}`)
         .join('\n');
 
-      const sensorSection = hasSensorData
-        ? `\nLive Sensor Readings:\n${Object.entries(sensorData).map(([k, v]) => `  ${k}: ${v}`).join('\n')}`
-        : '';
-
       const result = await invokeLLM({
         prompt: `You are a security operations AI for an airport. Generate 3 tactical recommendations for this incident.
-${sensorSection ? 'Use the provided sensor readings to make your recommendations more specific and data-driven.' : ''}
 
 Incident: ${incident.title}
 Type: ${incident.type}
@@ -435,11 +221,10 @@ Past officer feedback on recommendations:
 ${pastFeedback || 'No prior feedback'}
 
 For each recommendation provide:
-- action_text: specific tactical action (2-3 sentences)${hasSensorData ? ', referencing relevant sensor values where applicable' : ''}
+- action_text: specific tactical action (2-3 sentences)
 - predicted_outcome: what will happen if they take this action
 - confidence: a number 1-100
-- priority: critical/high/medium/low
-- sensor_context: ${hasSensorData ? 'a brief note (1 sentence) on which sensor readings influenced this recommendation, or null if not applicable' : 'null'}`,
+- priority: critical/high/medium/low`,
         response_json_schema: {
           type: 'object',
           properties: {
@@ -451,14 +236,12 @@ For each recommendation provide:
                   action_text: { type: 'string' },
                   predicted_outcome: { type: 'string' },
                   confidence: { type: 'number' },
-                  priority: { type: 'string' },
-                  sensor_context: { type: 'string' }
+                  priority: { type: 'string' }
                 }
               }
             }
           }
-        },
-        sensorData: hasSensorData ? sensorData : undefined
+        }
       });
 
       // Handle different response formats from AI
@@ -511,7 +294,7 @@ For each recommendation provide:
         }
         console.log('[GenerateRecs] All recommendations saved, invalidating cache...');
         queryClient.invalidateQueries({ queryKey: ['recommendations'] });
-        toast.success('New recommendations generated' + (hasSensorData ? ' using sensor data' : ''));
+        toast.success('New recommendations generated');
       } else {
         toast.error('AI returned no recommendations. Try again.');
         console.error('AI result full:', JSON.stringify(result));
@@ -591,12 +374,9 @@ For each recommendation provide:
             </div>
             <Button onClick={generateRecs} disabled={generating} className="gap-2">
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Generate{hasSensorData ? ' with Sensors' : ''} Recommendations
+              Generate Recommendations
             </Button>
           </div>
-
-          {/* Sensor input panel */}
-          <SensorPanel sensorData={sensorData} onSensorDataChange={setSensorData} />
 
           {filteredRecs.length > 0 ? (
             <div className="grid gap-4 max-w-3xl">
@@ -614,7 +394,7 @@ For each recommendation provide:
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Brain className="w-12 h-12 mb-4 opacity-30" />
               <p className="text-sm">Select an incident and generate recommendations</p>
-              <p className="text-xs mt-1 opacity-60">Optionally load sensor data above for context-aware AI analysis</p>
+              <p className="text-xs mt-1 opacity-60">AI will generate tactical recommendations based on incident details</p>
             </div>
           )}
         </div>

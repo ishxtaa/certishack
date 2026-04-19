@@ -68,9 +68,10 @@ export default function PatrolRoutes() {
     }
     setOptimizing(true);
 
-    const incidentLocations = activeIncidents
-      .filter(i => i.latitude && i.longitude)
-      .map(i => `${i.location_name} (${i.latitude}, ${i.longitude}) severity: ${i.severity}`)
+    // Build incident list with IDs so we can look up real coordinates after
+    const incidentsWithCoords = activeIncidents.filter(i => i.latitude && i.longitude);
+    const incidentList = incidentsWithCoords
+      .map(i => `ID: ${i.id} | ${i.location_name} (${i.latitude}, ${i.longitude}) severity: ${i.severity}`)
       .join('\n');
 
     const result = await invokeLLM({
@@ -80,17 +81,18 @@ Officer: ${selectedOfficer.name}
 Current location: ${selectedOfficer.current_zone || 'Main Terminal'} (${selectedOfficer.latitude || 1.3604}, ${selectedOfficer.longitude || 103.9893})
 Specialization: ${selectedOfficer.specialization}
 
-Active incidents (format: location (lat, lng) severity: X):
-${incidentLocations || 'No active incidents with coordinates'}
+Active incidents (USE THESE EXACT IDs AND COORDINATES - DO NOT MAKE UP NEW ONES):
+${incidentList || 'No active incidents with coordinates'}
 
 STRICT PRIORITIZATION RULES:
 1. PRIMARY: Rank stops by severity score DESCENDING (highest severity = first stop). Incidents with severity >= 8 must be visited before any severity < 8.
 2. SECONDARY: Among incidents with equal severity (within ±1.0 of each other), choose the closest to the officer's current position first to minimize travel time.
 3. TERTIARY: After all active incidents, add 1-2 high-risk area checkpoints to cover blind spots.
-4. Output exactly 5-8 waypoints as lat/lng pairs in strict priority order.
-5. Include a "priority_note" per waypoint explaining the severity/distance reasoning.
+4. Output exactly 5-8 waypoints in strict priority order.
+5. For incidents, use the exact incident ID from the list above. For checkpoints, use ID 0.
+6. Include a "priority_note" per waypoint explaining the severity/distance reasoning.
 
-Respond with valid JSON containing a "route" array with lat, lng, name, priority_note, and severity fields.`,
+Respond with valid JSON containing a "route" array with incident_id, name, priority_note, and severity fields. I will look up the actual coordinates from the database using the incident_id.`,
       response_json_schema: {
         type: "object",
         properties: {
@@ -99,8 +101,7 @@ Respond with valid JSON containing a "route" array with lat, lng, name, priority
             items: {
               type: "object",
               properties: {
-                lat: { type: "number" },
-                lng: { type: "number" },
+                incident_id: { type: "number" },
                 name: { type: "string" },
                 priority_note: { type: "string" },
                 severity: { type: "number" }
@@ -115,22 +116,80 @@ Respond with valid JSON containing a "route" array with lat, lng, name, priority
     // Handle different response formats from AI
     let route = result?.route;
     
-    // If AI returns numbered format like {waypoint1: {...}, waypoint2: {...}}, convert to array
+    // If AI returns numbered format, convert to array
     if (!route && result && typeof result === 'object') {
       route = Object.values(result).filter(item => 
-        item && typeof item === 'object' && (item.lat || item.latitude)
+        item && typeof item === 'object' && (item.incident_id !== undefined || item.id !== undefined || item.lat !== undefined)
       );
     }
     
     if (route && route.length > 0) {
-      // Normalize lat/lng properties
-      const normalizedRoute = route.map(p => ({
-        lat: p.lat || p.latitude,
-        lng: p.lng || p.longitude,
-        name: p.name || p.location_name || 'Waypoint',
-        priority_note: p.priority_note || '',
-        severity: p.severity || 5
-      }));
+      // Look up actual coordinates from database using incident_id
+      const normalizedRoute = route.map(p => {
+        const incidentId = p.incident_id || p.id || p.incidentId;
+        
+        // If AI returned lat/lng directly, check if they're valid Changi coordinates
+        const aiLat = p.lat || p.latitude;
+        const aiLng = p.lng || p.longitude;
+        
+        // Changi Airport bounds (approximately)
+        const isValidChangiCoord = (lat, lng) => {
+          return lat >= 1.35 && lat <= 1.37 && lng >= 103.98 && lng <= 104.00;
+        };
+        
+        // First try to find by incident ID
+        if (incidentId && incidentId > 0) {
+          const incident = incidentsWithCoords.find(i => i.id === incidentId);
+          if (incident) {
+            return {
+              lat: incident.latitude,
+              lng: incident.longitude,
+              name: incident.location_name || p.name || 'Incident',
+              priority_note: p.priority_note || '',
+              severity: incident.severity || p.severity || 5
+            };
+          }
+        }
+        
+        // If AI gave valid coordinates within Changi, use them
+        if (aiLat && aiLng && isValidChangiCoord(aiLat, aiLng)) {
+          return {
+            lat: aiLat,
+            lng: aiLng,
+            name: p.name || 'Waypoint',
+            priority_note: p.priority_note || '',
+            severity: p.severity || 5
+          };
+        }
+        
+        // Try to match by location name
+        if (p.name) {
+          const incidentByName = incidentsWithCoords.find(i => 
+            i.location_name && i.location_name.toLowerCase().includes(p.name.toLowerCase())
+          );
+          if (incidentByName) {
+            return {
+              lat: incidentByName.latitude,
+              lng: incidentByName.longitude,
+              name: incidentByName.location_name,
+              priority_note: p.priority_note || '',
+              severity: incidentByName.severity || p.severity || 5
+            };
+          }
+        }
+        
+        // Fallback: use officer's position for checkpoints
+        const baseLat = selectedOfficer.latitude || 1.3604;
+        const baseLng = selectedOfficer.longitude || 103.9893;
+        return {
+          lat: baseLat + (Math.random() - 0.5) * 0.002,
+          lng: baseLng + (Math.random() - 0.5) * 0.002,
+          name: p.name || 'Checkpoint',
+          priority_note: p.priority_note || 'Patrol checkpoint',
+          severity: p.severity || 3
+        };
+      });
+      
       setPatrolRoute(normalizedRoute.map(p => [p.lat, p.lng]));
       setRouteStops(normalizedRoute);
       toast.success(`Patrol route optimized — ${normalizedRoute.length} stops, prioritized by severity then distance`);

@@ -117,3 +117,6 @@
 .leaflet-tile-pane {
   filter: brightness(0.85) hue-rotate(195deg) saturate(1.2);
 }
+.navy-map {
+  filter: brightness(0.6) contrast(1.6) saturate(1.0) hue-rotate(290deg);
+}

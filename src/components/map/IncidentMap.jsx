@@ -74,18 +74,18 @@ export default function IncidentMap({
     <div className="bg-transparent text-black opacity-100 rounded w-full h-full" style={{ background: '#0a0f1e' }}>
       <MapContainer
         center={toLatLng(AIRPORT_CENTER)}
-        zoom={15}
+        zoom={14}
         maxZoom={18}
-        minZoom={13}
-        maxBounds={toLatLngBounds(CHANGI_BOUNDS)}
-        maxBoundsViscosity={1.0}
+        minZoom={12}
+
         className="w-full h-full rounded-xl"
         zoomControl={false}>
         
         {/* Navy-blue dark tiles */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>' />
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>' 
+          className="navy-map" />
         
         <MapEvents center={focusCenter} />
 

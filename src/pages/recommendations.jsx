@@ -514,6 +514,7 @@ For each recommendation provide:
         toast.success('New recommendations generated' + (hasSensorData ? ' using sensor data' : ''));
       } else {
         toast.error('AI returned no recommendations. Try again.');
+        console.error('AI result full:', JSON.stringify(result));
         console.error('AI result:', result);
       }
     } catch (err) {
@@ -535,22 +536,40 @@ For each recommendation provide:
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeIncidents.map(inc => (
-              <button
-                key={inc.id}
-                onClick={() => setSelectedIncidentId(inc.id)}
-                className={cn(
-                  'w-full text-left p-3 rounded-lg border transition-all text-xs',
-                  selectedIncidentId === inc.id
-                    ? 'bg-primary/10 border-primary/30'
-                    : 'bg-card/50 border-border hover:border-primary/20'
+              <div key={inc.id}>
+                <button
+                  onClick={() => setSelectedIncidentId(inc.id)}
+                  className={cn(
+                    'w-full text-left p-3 rounded-lg border transition-all text-xs',
+                    selectedIncidentId === inc.id
+                      ? 'bg-primary/10 border-primary/30'
+                      : 'bg-card/50 border-border hover:border-primary/20'
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <SeverityBadge score={inc.severity} />
+                  </div>
+                  <p className="font-medium text-sm">{inc.title}</p>
+                  <p className="text-muted-foreground mt-0.5">{inc.location_name}</p>
+                </button>
+                {selectedIncidentId === inc.id && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await incidentsApi.update(inc.id, { status: 'resolved' });
+                        queryClient.invalidateQueries({ queryKey: ['incidents'] });
+                        setSelectedIncidentId(null);
+                        toast.success('Incident resolved');
+                      } catch (err) {
+                        toast.error('Failed to resolve incident');
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors flex items-center gap-2 mt-1"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" /> Resolve Incident
+                  </button>
                 )}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <SeverityBadge score={inc.severity} />
-                </div>
-                <p className="font-medium text-sm">{inc.title}</p>
-                <p className="text-muted-foreground mt-0.5">{inc.location_name}</p>
-              </button>
+              </div>
             ))}
             {activeIncidents.length === 0 && (
               <p className="text-center text-xs text-muted-foreground py-8">No active incidents</p>

@@ -40,13 +40,14 @@ export default function PostAnalysis() {
     if (!selectedIncident) return;
     setGenerating(true);
 
-    const incRecs = recommendations.filter(r => String(r.incident_id) === String(selectedIncident.id));
-    const recsText = incRecs.map(r => 
-      `- Action: ${r.action_text}\n  Outcome predicted: ${r.predicted_outcome}\n  Officer feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`
-    ).join('\n');
+    try {
+      const incRecs = recommendations.filter(r => String(r.incident_id) === String(selectedIncident.id));
+      const recsText = incRecs.map(r => 
+        `- Action: ${r.action_text}\n  Outcome predicted: ${r.predicted_outcome}\n  Officer feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`
+      ).join('\n');
 
-    const result = await invokeLLM({
-      prompt: `You are a security training analyst. Create a comprehensive post-incident analysis report for training purposes.
+      const result = await invokeLLM({
+        prompt: `You are a security training analyst. Create a comprehensive post-incident analysis report for training purposes.
 
 Incident: ${selectedIncident.title}
 Type: ${selectedIncident.type}
@@ -54,56 +55,68 @@ Severity: ${selectedIncident.severity}/10
 Location: ${selectedIncident.location_name}
 Status: ${selectedIncident.status}
 Description: ${selectedIncident.description || 'N/A'}
-Narrative: ${selectedIncident.narrative || 'N/A'}
 
 AI Recommendations & Officer Feedback:
 ${recsText || 'No recommendations recorded'}
 
-Generate the report in markdown with these sections:
-1. **Incident Summary** - What happened
-2. **Response Analysis** - How the response went, what worked/didn't
-3. **Key Learnings** - Tactical lessons for future incidents
-4. **Training Recommendations** - Specific drills or procedures to practice
-5. **Protocol Improvements** - Suggested changes to SOPs
+Generate a markdown report with these sections:
+1. ## Incident Summary
+2. ## Response Analysis
+3. ## Key Learnings
+4. ## Training Recommendations
+5. ## Protocol Improvements
 
-Keep it concise but actionable for training purposes.
-
-Respond with valid JSON containing an "analysis" field with the markdown report.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          analysis: { type: "string" }
+Return ONLY a JSON object with a single "analysis" key containing the full markdown as a string.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            analysis: { type: "string" }
+          }
         }
-      }
-    });
+      });
 
-    // Handle different response formats from AI
-    let analysis = result?.analysis;
-    
-    // If AI returns different property names or just a string, try to extract analysis
-    if (!analysis && result && typeof result === 'object') {
-      analysis = result.analysis || result.report || result.content;
+      // Extract the markdown string from whatever format AI returned
+      let analysisText = null;
+
+      if (result && typeof result === 'object') {
+        // Try common key names
+        analysisText = result.analysis || result.markdown || result.report || result.content || result.response;
+        
+        // If AI returned section keys, merge them
+        if (!analysisText) {
+          const sectionKeys = ['Incident Summary', 'Response Analysis', 'Key Learnings', 'Training Recommendations', 'Protocol Improvements'];
+          const hasSections = sectionKeys.some(k => result[k]);
+          if (hasSections) {
+            analysisText = sectionKeys.filter(k => result[k]).map(k => result[k]).join('\n\n');
+          }
+        }
+
+        // If still nothing, stringify the whole object
+        if (!analysisText) {
+          analysisText = JSON.stringify(result, null, 2);
+        }
+      } else if (typeof result === 'string') {
+        analysisText = result;
+      }
+
+      // If analysisText is still an object, stringify it
+      if (analysisText && typeof analysisText === 'object') {
+        analysisText = JSON.stringify(analysisText, null, 2);
+      }
+
+      if (analysisText) {
+        setAnalysis(analysisText);
+        await incidentsApi.update(selectedIncident.id, { post_analysis: analysisText });
+        toast.success('Analysis generated');
+      } else {
+        toast.error('AI returned invalid format. Try again.');
+      }
+    } catch (err) {
+      console.error('generateAnalysis error:', err);
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setGenerating(false);
     }
-    // If result is just a string, use it directly
-    if (!analysis && typeof result === 'string') {
-      analysis = result;
-    }
-    
-    // Ensure analysis is a string - if it's an object, convert to string or extract content
-    if (analysis && typeof analysis === 'object') {
-      console.log('[PostAnalysis] Analysis is object, converting:', analysis);
-      analysis = analysis.content || analysis.text || analysis.markdown || JSON.stringify(analysis, null, 2);
-    }
-    
-    if (analysis && typeof analysis === 'string') {
-      setAnalysis(analysis);
-      await incidentsApi.update(selectedIncident.id, { post_analysis: analysis });
-      toast.success('Analysis generated');
-    } else {
-      console.error('[PostAnalysis] Invalid analysis:', result);
-      toast.error('AI returned invalid analysis format. Try again.');
-    }
-    setGenerating(false);
   };
 
   return (

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { incidentsApi, invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge, StatusBadge } from '@/components/dashboard/IncidentBadge';
 import { AIRPORT_ZONES, INCIDENT_TYPES, getSeverityLevel, getSeverityColor } from '@/lib/securityUtils';
@@ -75,7 +74,7 @@ export default function Heatmap() {
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 200),
+    queryFn: () => incidentsApi.list(),
   });
 
   const activeIncidents = incidents.filter(i => i.status === 'active' || i.status === 'responding');
@@ -123,7 +122,7 @@ Return the score and a brief justification.`,
     });
 
     if (result.severity) {
-      await base44.entities.Incident.update(incidentId, { severity: result.severity });
+      await incidentsApi.update(incidentId, { severity: result.severity });
       toast.success(`Severity updated to ${result.severity.toFixed(1)}: ${result.justification}`);
     }
     setComputingSeverity(null);

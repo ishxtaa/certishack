@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { incidentsApi, officersApi, invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import IncidentMap from '@/components/map/IncidentMap';
 import { Button } from '@/components/ui/button';
@@ -39,12 +38,12 @@ export default function PatrolRoutes() {
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 50),
+    queryFn: () => incidentsApi.list(),
   });
 
   const { data: officers = [] } = useQuery({
     queryKey: ['officers'],
-    queryFn: () => base44.entities.Officer.list(),
+    queryFn: () => officersApi.list(),
   });
 
   const activeIncidents = incidents.filter(i => i.status === 'active' || i.status === 'responding');
@@ -52,8 +51,8 @@ export default function PatrolRoutes() {
 
   const assignMutation = useMutation({
     mutationFn: async ({ incidentId, officerName, officerId }) => {
-      await base44.entities.Incident.update(incidentId, { assigned_officer: officerName, status: 'responding' });
-      await base44.entities.Officer.update(officerId, { status: 'responding' });
+      await incidentsApi.update(incidentId, { assigned_officer: officerName, status: 'responding' });
+      await officersApi.update(officerId, { status: 'responding' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
@@ -89,7 +88,9 @@ STRICT PRIORITIZATION RULES:
 2. SECONDARY: Among incidents with equal severity (within ±1.0 of each other), choose the closest to the officer's current position first to minimize travel time.
 3. TERTIARY: After all active incidents, add 1-2 high-risk area checkpoints to cover blind spots.
 4. Output exactly 5-8 waypoints as lat/lng pairs in strict priority order.
-5. Include a "priority_note" per waypoint explaining the severity/distance reasoning.`,
+5. Include a "priority_note" per waypoint explaining the severity/distance reasoning.
+
+Respond with valid JSON containing a "route" array with lat, lng, name, priority_note, and severity fields.`,
       response_json_schema: {
         type: "object",
         properties: {
@@ -111,10 +112,30 @@ STRICT PRIORITIZATION RULES:
       }
     });
 
-    if (result.route) {
-      setPatrolRoute(result.route.map(p => [p.lat, p.lng]));
-      setRouteStops(result.route);
-      toast.success(`Patrol route optimized — ${result.route.length} stops, prioritized by severity then distance`);
+    // Handle different response formats from AI
+    let route = result?.route;
+    
+    // If AI returns numbered format like {waypoint1: {...}, waypoint2: {...}}, convert to array
+    if (!route && result && typeof result === 'object') {
+      route = Object.values(result).filter(item => 
+        item && typeof item === 'object' && (item.lat || item.latitude)
+      );
+    }
+    
+    if (route && route.length > 0) {
+      // Normalize lat/lng properties
+      const normalizedRoute = route.map(p => ({
+        lat: p.lat || p.latitude,
+        lng: p.lng || p.longitude,
+        name: p.name || p.location_name || 'Waypoint',
+        priority_note: p.priority_note || '',
+        severity: p.severity || 5
+      }));
+      setPatrolRoute(normalizedRoute.map(p => [p.lat, p.lng]));
+      setRouteStops(normalizedRoute);
+      toast.success(`Patrol route optimized — ${normalizedRoute.length} stops, prioritized by severity then distance`);
+    } else {
+      toast.error('AI returned no route. Try again.');
     }
     setOptimizing(false);
   };
@@ -138,7 +159,9 @@ Location: ${incident.location_name}
 Available officers:
 ${availableOfficers.map(o => `${o.name} (${o.badge_id}) - ${o.specialization} - Zone: ${o.current_zone || 'Unknown'}`).join('\n')}
 
-Pick the most suitable officer based on proximity and specialization. Return their badge_id.`,
+Pick the most suitable officer based on proximity and specialization.
+
+Respond with valid JSON containing "badge_id" and "reasoning" fields.`,
       response_json_schema: {
         type: "object",
         properties: {
@@ -148,7 +171,15 @@ Pick the most suitable officer based on proximity and specialization. Return the
       }
     });
 
-    const chosen = availableOfficers.find(o => o.badge_id === result.badge_id) || availableOfficers[0];
+    // Handle different response formats from AI
+    let badgeId = result?.badge_id;
+    
+    // If AI returns different property names, try to find badge_id
+    if (!badgeId && result && typeof result === 'object') {
+      badgeId = result.badge_id || result.badgeId || result.officer_id || result.officerId;
+    }
+    
+    const chosen = availableOfficers.find(o => o.badge_id === badgeId) || availableOfficers[0];
     assignMutation.mutate({ incidentId, officerName: chosen.name, officerId: chosen.id });
     setAssigning(null);
   };

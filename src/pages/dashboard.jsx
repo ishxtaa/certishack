@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { authApi, incidentsApi, officersApi } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import StatusCard from '@/components/dashboard/StatusCard';
 import LiveFeed from '@/components/dashboard/LiveFeed';
@@ -15,17 +15,17 @@ export default function Dashboard() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => authApi.me(),
   });
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 50),
+    queryFn: () => incidentsApi.list(),
   });
 
   const { data: officers = [] } = useQuery({
     queryKey: ['officers'],
-    queryFn: () => base44.entities.Officer.list(),
+    queryFn: () => officersApi.list(),
   });
 
   const activeIncidents = incidents.filter(i => i.status === 'active' || i.status === 'responding');

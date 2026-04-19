@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { authApi } from '@/api/openaiClient';
 
 const AuthContext = createContext();
 
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   const checkUserAuth = async () => {
     setIsLoadingAuth(true);
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await authApi.me();
       setUser(currentUser);
       setIsAuthenticated(true);
     } catch {
@@ -32,7 +32,22 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setAuthError(null);
-      const result = await base44.auth.login(email, password);
+      // Hash password with SHA256 (same as backend)
+      const hashedPassword = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password))
+        .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+      
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: hashedPassword })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+      
+      const result = await response.json();
+      localStorage.setItem('token', result.access_token);
       localStorage.setItem('certis_token', result.access_token);
       setUser(result.user);
       setIsAuthenticated(true);
@@ -44,13 +59,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    base44.auth.logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('certis_token');
     setUser(null);
     setIsAuthenticated(false);
   };
 
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin();
+    window.location.href = '/login';
   };
 
   return (

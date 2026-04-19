@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { invokeLLM } from '@/api/openaiClient';
 import {
@@ -6,9 +6,11 @@ import {
   ResponsiveContainer, Tooltip
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, ShieldAlert, MapPin, Clock, Zap } from 'lucide-react';
+import { X, Loader2, ShieldAlert, MapPin, Clock, Zap, Sparkles } from 'lucide-react';
 import { SeverityBadge, StatusBadge } from './IncidentBadge';
 import OfficerFeedback from './OfficerFeedback';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import moment from 'moment';
 
 const HIGH_RISK_ZONES = ['Terminal 1 - Departure', 'Terminal 2 - Departure', 'Terminal 3 - Departure', 'Jewel', 'Runway 1', 'Runway 2', 'Control Tower'];
@@ -74,9 +76,9 @@ export default function SeverityRadarPanel({ incident, allIncidents, onClose, cu
   const radarData = computeRadarData(incident, allIncidents);
   const compositeScore = (radarData.reduce((s, d) => s + d.score, 0) / radarData.length).toFixed(1);
 
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      setLoading(true);
+  const fetchAnalysis = async () => {
+    setLoading(true);
+    try {
       const past = allIncidents
         .filter(i => i.type === incident.type && i.id !== incident.id)
         .slice(0, 5)
@@ -99,10 +101,11 @@ ${past}
 Focus on: what makes this incident at this severity, key risk factors, and recommended urgency.`,
       });
       setAiAnalysis(typeof result === 'string' ? result : null);
-      setLoading(false);
-    };
-    fetchAnalysis();
-  }, [incident.id]);
+    } catch (error) {
+      toast.error('Failed to get AI analysis');
+    }
+    setLoading(false);
+  };
 
   return (
     <AnimatePresence>
@@ -204,9 +207,16 @@ Focus on: what makes this incident at this severity, key risk factors, and recom
             <div className="space-y-4">
               {/* AI insight */}
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
-                  <Zap className="w-3.5 h-3.5 text-primary" /> AI Severity Assessment
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-primary" /> AI Severity Assessment
+                  </h3>
+                  {!aiAnalysis && !loading && (
+                    <Button size="sm" variant="outline" onClick={fetchAnalysis} className="h-6 text-[10px] px-2">
+                      <Sparkles className="w-3 h-3 mr-1" /> Analyze
+                    </Button>
+                  )}
+                </div>
                 {loading ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing…
@@ -215,7 +225,9 @@ Focus on: what makes this incident at this severity, key risk factors, and recom
                   <div className="bg-primary/5 border border-primary/15 rounded-xl p-3">
                     <p className="text-xs text-foreground/85 leading-relaxed">{aiAnalysis}</p>
                   </div>
-                ) : null}
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Click "Analyze" to get AI assessment</p>
+                )}
               </div>
 
               {/* Description */}

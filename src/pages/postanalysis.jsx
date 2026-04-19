@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { incidentsApi, recommendationsApi, invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge, StatusBadge } from '@/components/dashboard/IncidentBadge';
 import { Button } from '@/components/ui/button';
@@ -21,12 +20,12 @@ export default function PostAnalysis() {
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 100),
+    queryFn: () => incidentsApi.list(),
   });
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ['recommendations'],
-    queryFn: () => base44.entities.Recommendation.list('-created_date', 100),
+    queryFn: () => recommendationsApi.list(),
   });
 
   const resolvedIncidents = incidents.filter(i => i.status === 'resolved' || i.status === 'contained' || i.status === 'false_alarm');
@@ -41,7 +40,7 @@ export default function PostAnalysis() {
     if (!selectedIncident) return;
     setGenerating(true);
 
-    const incRecs = recommendations.filter(r => r.incident_id === selectedIncident.id);
+    const incRecs = recommendations.filter(r => String(r.incident_id) === String(selectedIncident.id));
     const recsText = incRecs.map(r => 
       `- Action: ${r.action_text}\n  Outcome predicted: ${r.predicted_outcome}\n  Officer feedback: ${r.feedback}${r.officer_notes ? ` (${r.officer_notes})` : ''}`
     ).join('\n');
@@ -67,7 +66,9 @@ Generate the report in markdown with these sections:
 4. **Training Recommendations** - Specific drills or procedures to practice
 5. **Protocol Improvements** - Suggested changes to SOPs
 
-Keep it concise but actionable for training purposes.`,
+Keep it concise but actionable for training purposes.
+
+Respond with valid JSON containing an "analysis" field with the markdown report.`,
       response_json_schema: {
         type: "object",
         properties: {
@@ -76,10 +77,31 @@ Keep it concise but actionable for training purposes.`,
       }
     });
 
-    if (result.analysis) {
-      setAnalysis(result.analysis);
-      await base44.entities.Incident.update(selectedIncident.id, { post_analysis: result.analysis });
+    // Handle different response formats from AI
+    let analysis = result?.analysis;
+    
+    // If AI returns different property names or just a string, try to extract analysis
+    if (!analysis && result && typeof result === 'object') {
+      analysis = result.analysis || result.report || result.content;
+    }
+    // If result is just a string, use it directly
+    if (!analysis && typeof result === 'string') {
+      analysis = result;
+    }
+    
+    // Ensure analysis is a string - if it's an object, convert to string or extract content
+    if (analysis && typeof analysis === 'object') {
+      console.log('[PostAnalysis] Analysis is object, converting:', analysis);
+      analysis = analysis.content || analysis.text || analysis.markdown || JSON.stringify(analysis, null, 2);
+    }
+    
+    if (analysis && typeof analysis === 'string') {
+      setAnalysis(analysis);
+      await incidentsApi.update(selectedIncident.id, { post_analysis: analysis });
       toast.success('Analysis generated');
+    } else {
+      console.error('[PostAnalysis] Invalid analysis:', result);
+      toast.error('AI returned invalid analysis format. Try again.');
     }
     setGenerating(false);
   };

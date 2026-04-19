@@ -92,8 +92,10 @@ export default function IncidentMap({
         {/* Incident markers */}
         {incidents.map((inc) => {
           if (!inc.latitude || !inc.longitude) return null;
-          const level = getSeverityLevel(inc.severity);
-          const color = SEVERITY_MARKER_COLORS[level];
+          // Ensure severity is a number, default to 5 if undefined/null
+          const severity = typeof inc.severity === 'number' ? inc.severity : 5;
+          const level = getSeverityLevel(severity);
+          const color = SEVERITY_MARKER_COLORS[level] || SEVERITY_MARKER_COLORS.medium;
           const isActive = inc.status === 'active' || inc.status === 'responding';
           return (
             <CircleMarker
@@ -112,7 +114,8 @@ export default function IncidentMap({
                 <div className="text-xs space-y-1">
                   <p className="font-semibold">{inc.title}</p>
                   <p className="text-muted-foreground">{inc.location_name}</p>
-                  <p>Severity: {inc.severity}/10</p>
+                  <p>Severity: {severity}/10 ({level})</p>
+                  <p style={{ color: color }}>● Marker Color</p>
                 </div>
               </Popup>
             </CircleMarker>);
@@ -121,6 +124,7 @@ export default function IncidentMap({
 
         {/* Officer avatar markers */}
         {officers.map((off) => {
+          console.log('[IncidentMap] Officer:', off.name, 'lat:', off.latitude, 'lng:', off.longitude);
           if (!off.latitude || !off.longitude) return null;
           return (
             <Marker

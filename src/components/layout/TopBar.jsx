@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Radio, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { incidentsApi } from '@/api/openaiClient';
 import NotificationsPopup from '@/components/layout/NotificationsPopUp';
 
 export default function TopBar({ activeIncidents = 0, title = "Command Center" }) {
@@ -16,7 +16,7 @@ export default function TopBar({ activeIncidents = 0, title = "Command Center" }
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 50)
+    queryFn: () => incidentsApi.list()
   });
 
   return (

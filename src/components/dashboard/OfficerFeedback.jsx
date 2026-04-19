@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { incidentsApi, invokeLLM } from '@/api/openaiClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,7 +21,7 @@ export default function OfficerFeedback({ incident, currentUser }) {
   const saveMutation = useMutation({
     mutationFn: async (/** @type {{ officer_name: string; text: string; timestamp: string; type: string }} */ entry) => {
       const existing = incident.officer_feedback || [];
-      await base44.entities.Incident.update(incident.id, {
+      await incidentsApi.update(incident.id, {
         officer_feedback: [...existing, entry]
       });
       return entry;

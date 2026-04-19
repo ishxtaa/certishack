@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { invokeLLM } from '@/api/openaiClient';
+import { authApi, incidentsApi, recommendationsApi, invokeLLM } from '@/api/openaiClient';
 import TopBar from '@/components/layout/TopBar';
 import { SeverityBadge } from '@/components/dashboard/IncidentBadge';
 import OfficerFeedback from '@/components/dashboard/OfficerFeedback';
@@ -358,29 +357,32 @@ export default function Recommendations() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => authApi.me()
   });
 
   const { data: incidents = [] } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => base44.entities.Incident.list('-created_date', 30)
+    queryFn: () => incidentsApi.list()
   });
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ['recommendations'],
-    queryFn: () => base44.entities.Recommendation.list('-created_date', 50)
+    queryFn: () => recommendationsApi.list()
   });
 
   const activeIncidents = incidents.filter(i => i.status === 'active' || i.status === 'responding');
   const selectedIncident = incidents.find(i => i.id === selectedIncidentId) || null;
 
-  const filteredRecs = (selectedIncidentId
-    ? recommendations.filter(r => r.incident_id === selectedIncidentId)
-    : recommendations
-  ).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  // Show ACCEPTED recommendations always, plus PENDING recommendations from latest generation
+  const filteredRecs = selectedIncidentId
+    ? recommendations
+        .filter(r => String(r.incident_id) === String(selectedIncidentId) && (r.feedback === 'accepted' || r.feedback === 'pending'))
+        .slice()
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+    : [];
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Recommendation.update(id, data),
+    mutationFn: ({ id, data }) => recommendationsApi.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recommendations'] })
   });
 
@@ -390,12 +392,22 @@ export default function Recommendations() {
   };
 
   const hasSensorData = Object.keys(sensorData).length > 0;
+  const [lastRequestTime, setLastRequestTime] = useState(0);
 
   const generateRecs = async () => {
     if (!selectedIncidentId) {
       toast.error('Select an incident first');
       return;
     }
+    
+    // Check cooldown (3 seconds between requests)
+    const now = Date.now();
+    if (now - lastRequestTime < 3000) {
+      toast.error('Please wait 3 seconds between AI requests');
+      return;
+    }
+    setLastRequestTime(now);
+    
     setGenerating(true);
     try {
       const incident = incidents.find(i => i.id === selectedIncidentId);
@@ -449,16 +461,55 @@ For each recommendation provide:
         sensorData: hasSensorData ? sensorData : undefined
       });
 
-      const recs = result?.recommendations || (Array.isArray(result) ? result : null);
-      if (recs && recs.length > 0) {
-        for (const rec of recs) {
-          await base44.entities.Recommendation.create({
-            ...rec,
-            sensor_context: rec.sensor_context || undefined,
-            incident_id: selectedIncidentId,
-            feedback: 'pending'
-          });
+      // Handle different response formats from AI
+      console.log('[GenerateRecs] AI raw result:', result);
+      console.log('[GenerateRecs] Object keys:', Object.keys(result || {}));
+      console.log('[GenerateRecs] Is array?', Array.isArray(result));
+      
+      let recs = result?.recommendations || result?.tactical_recommendations || (Array.isArray(result) ? result : null);
+      console.log('[GenerateRecs] Extracted recs from standard props:', recs);
+      
+      // If AI returns {recommendation1, recommendation2, ...} format, convert to array
+      if (!recs && result && typeof result === 'object' && !Array.isArray(result)) {
+        const keys = Object.keys(result);
+        console.log('[GenerateRecs] All keys:', keys);
+        
+        // Filter keys that look like recommendation1, recommendation2, etc.
+        const recKeys = keys.filter(k => /^recommendation\d+$/i.test(k));
+        console.log('[GenerateRecs] Recommendation keys found:', recKeys);
+        
+        if (recKeys.length > 0) {
+          recs = recKeys.map(k => result[k]);
+          console.log('[GenerateRecs] Extracted recs by keys:', recs);
         }
+      }
+      
+      if (recs && recs.length > 0) {
+        console.log('[GenerateRecs] Saving', recs.length, 'recommendations...');
+        for (let i = 0; i < recs.length; i++) {
+          const rec = recs[i];
+          console.log(`[GenerateRecs] Saving rec ${i+1}:`, rec);
+          try {
+            // Only send fields that the backend accepts
+            const payload = {
+              incident_id: String(selectedIncidentId),
+              action_text: rec.action_text,
+              predicted_outcome: rec.predicted_outcome,
+              confidence: Number(rec.confidence),
+              priority: rec.priority,
+              feedback: 'pending',
+              officer_notes: rec.sensor_context || undefined,
+              outcome_actual: undefined
+            };
+            console.log(`[GenerateRecs] Payload ${i+1}:`, payload);
+            const response = await recommendationsApi.create(payload);
+            console.log(`[GenerateRecs] Saved rec ${i+1}, response:`, response);
+          } catch (saveErr) {
+            console.error(`[GenerateRecs] Failed to save rec ${i+1}:`, saveErr);
+            throw saveErr;
+          }
+        }
+        console.log('[GenerateRecs] All recommendations saved, invalidating cache...');
         queryClient.invalidateQueries({ queryKey: ['recommendations'] });
         toast.success('New recommendations generated' + (hasSensorData ? ' using sensor data' : ''));
       } else {

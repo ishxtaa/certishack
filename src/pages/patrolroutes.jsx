@@ -75,24 +75,24 @@ export default function PatrolRoutes() {
       .join('\n');
 
     const result = await invokeLLM({
-      prompt: `Generate an optimized patrol route for a security officer at an airport.
+      prompt: `Generate an optimized patrol route for a security officer at Changi Airport, Singapore.
 
 Officer: ${selectedOfficer.name}
 Current location: ${selectedOfficer.current_zone || 'Main Terminal'} (${selectedOfficer.latitude || 1.3604}, ${selectedOfficer.longitude || 103.9893})
 Specialization: ${selectedOfficer.specialization}
 
-Active incidents (USE THESE EXACT IDs AND COORDINATES - DO NOT MAKE UP NEW ONES):
-${incidentList || 'No active incidents with coordinates'}
+Active incidents (format: location (lat, lng) severity: X):
+${incidentLocations || 'No active incidents with coordinates'}
 
-STRICT PRIORITIZATION RULES:
-1. PRIMARY: Rank stops by severity score DESCENDING (highest severity = first stop). Incidents with severity >= 8 must be visited before any severity < 8.
-2. SECONDARY: Among incidents with equal severity (within ±1.0 of each other), choose the closest to the officer's current position first to minimize travel time.
-3. TERTIARY: After all active incidents, add 1-2 high-risk area checkpoints to cover blind spots.
-4. Output exactly 5-8 waypoints in strict priority order.
-5. For incidents, use the exact incident ID from the list above. For checkpoints, use ID 0.
-6. Include a "priority_note" per waypoint explaining the severity/distance reasoning.
+STRICT RULES:
+1. ALL coordinates MUST be within Changi Airport bounds: lat 1.345 to 1.375, lng 103.975 to 103.995
+2. Rank stops by severity DESCENDING (highest first)
+3. Add 1-2 checkpoint stops after incidents
+4. Output exactly 5 waypoints as lat/lng pairs
 
-Respond with valid JSON containing a "route" array with incident_id, name, priority_note, and severity fields. I will look up the actual coordinates from the database using the incident_id.`,
+Example valid coordinates: lat: 1.3592, lng: 103.9894
+
+Respond with valid JSON containing a "route" array with lat, lng, name, priority_note, and severity fields.`,
       response_json_schema: {
         type: "object",
         properties: {

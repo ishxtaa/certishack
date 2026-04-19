@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { invokeLLM } from '@/api/openaiClient';
 import {
@@ -6,10 +6,9 @@ import {
   ResponsiveContainer, Tooltip
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, ShieldAlert, MapPin, Clock, Zap, Sparkles } from 'lucide-react';
+import { X, Loader2, ShieldAlert, MapPin, Clock, Zap } from 'lucide-react';
 import { SeverityBadge, StatusBadge } from './IncidentBadge';
 import OfficerFeedback from './OfficerFeedback';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import moment from 'moment';
 
@@ -86,7 +85,7 @@ export default function SeverityRadarPanel({ incident, allIncidents, onClose, cu
         .join('\n') || 'No past incidents of this type.';
 
       const result = await invokeLLM({
-        prompt: `Analyze this security incident and provide a brief severity assessment (2-3 sentences max):
+        prompt: `Analyze this security incident and provide a brief severity assessment:
 Incident: ${incident.title}
 Type: ${incident.type}
 Location: ${incident.location_name}
@@ -98,14 +97,37 @@ Radar Factors: ${radarData.map(d => `${d.factor}: ${d.score}/10`).join(', ')}
 Past similar incidents:
 ${past}
 
-Focus on: what makes this incident at this severity, key risk factors, and recommended urgency.`,
+Provide your analysis as a single paragraph (2-3 sentences) explaining the severity, key risk factors, and recommended urgency. Return ONLY the analysis text, no JSON formatting.`,
       });
-      setAiAnalysis(typeof result === 'string' ? result : null);
+      // Handle different response formats
+      let analysisText = null;
+      if (typeof result === 'string') {
+        analysisText = result;
+      } else if (result?.analysis) {
+        analysisText = result.analysis;
+      } else if (result?.response) {
+        analysisText = result.response;
+      } else if (typeof result === 'object' && result !== null) {
+        // If AI returns an object with multiple fields, convert to readable text
+        const parts = [];
+        if (result.severity) parts.push(`Severity: ${result.severity}`);
+        if (result.risk_factors) parts.push(`Risk Factors: ${Array.isArray(result.risk_factors) ? result.risk_factors.join(', ') : result.risk_factors}`);
+        if (result.recommended_urgency) parts.push(`Urgency: ${result.recommended_urgency}`);
+        if (result.severity_score) parts.push(`Score: ${result.severity_score}`);
+        // Try to find any text field
+        analysisText = parts.join('. ') || JSON.stringify(result);
+      }
+      setAiAnalysis(analysisText || 'Analysis completed.');
     } catch (error) {
       toast.error('Failed to get AI analysis');
     }
     setLoading(false);
   };
+
+  // Auto-analyze when panel opens
+  useEffect(() => {
+    fetchAnalysis();
+  }, [incident.id]);
 
   return (
     <AnimatePresence>
@@ -211,11 +233,6 @@ Focus on: what makes this incident at this severity, key risk factors, and recom
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-primary" /> AI Severity Assessment
                   </h3>
-                  {!aiAnalysis && !loading && (
-                    <Button size="sm" variant="outline" onClick={fetchAnalysis} className="h-6 text-[10px] px-2">
-                      <Sparkles className="w-3 h-3 mr-1" /> Analyze
-                    </Button>
-                  )}
                 </div>
                 {loading ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -226,7 +243,7 @@ Focus on: what makes this incident at this severity, key risk factors, and recom
                     <p className="text-xs text-foreground/85 leading-relaxed">{aiAnalysis}</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Click "Analyze" to get AI assessment</p>
+                  <p className="text-xs text-muted-foreground italic">Analysis unavailable</p>
                 )}
               </div>
 

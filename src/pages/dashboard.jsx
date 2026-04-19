@@ -31,9 +31,15 @@ export default function Dashboard() {
   const activeIncidents = incidents.filter(i => i.status === 'active' || i.status === 'responding');
 
   const sortedIncidents = [...incidents].sort((a, b) => {
-    const aResolved = a.status === 'resolved' || a.status === 'false_alarm' || a.status === 'contained';
-    const bResolved = b.status === 'resolved' || b.status === 'false_alarm' || b.status === 'contained';
-    if (aResolved !== bResolved) return aResolved ? 1 : -1;
+    // Priority: active > responding > contained > resolved/false_alarm
+    const statusPriority = { active: 0, responding: 1, contained: 2, resolved: 3, false_alarm: 4 };
+    const aPriority = statusPriority[a.status] ?? 5;
+    const bPriority = statusPriority[b.status] ?? 5;
+    
+    // First sort by status priority
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    
+    // Then sort by severity (highest first)
     return (b.severity || 0) - (a.severity || 0);
   });
   const availableOfficers = officers.filter(o => o.status === 'available');
@@ -83,22 +89,16 @@ export default function Dashboard() {
 
         {/* Main content */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0" style={{ height: 'calc(100% - 110px)' }}>
-          {/* Left: incident feed */}
-          <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
-            <div className="px-4 py-3 border-b border-border">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Live Incident Feed</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2">
-              <LiveFeed
-                incidents={sortedIncidents}
-                selectedId={selectedIncident?.id}
-                onSelect={handleIncidentSelect}
-              />
+          {/* Left: sidebar */}
+          <div className="lg:col-span-2 space-y-2 overflow-y-auto">
+            <div className="bg-card border border-border rounded-xl p-3">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 text-center">By Type</h3>
+              <SeverityChart incidents={incidents} compact />
             </div>
           </div>
 
-          {/* Center: map (larger) */}
-          <div className="lg:col-span-8 rounded-xl overflow-hidden border border-border" style={{ minHeight: '500px' }}>
+          {/* Center: map with overlay */}
+          <div className="lg:col-span-10 relative rounded-xl overflow-hidden border border-border" style={{ minHeight: '500px' }}>
             <IncidentMap
               incidents={incidents}
               officers={officers}
@@ -106,33 +106,20 @@ export default function Dashboard() {
               onIncidentClick={handleIncidentSelect}
               className="w-full h-full"
             />
-          </div>
-
-          {/* Right: analytics */}
-          <div className="lg:col-span-2 space-y-2 overflow-y-auto">
-            <div className="bg-card border border-border rounded-xl p-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Incidents by Type</h3>
-              <SeverityChart incidents={incidents} />
-            </div>
-
-            {selectedIncident && (
-              <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected Incident</h3>
-                <p className="text-sm font-semibold">{selectedIncident.title}</p>
-                <p className="text-xs text-muted-foreground">{selectedIncident.description}</p>
-                {selectedIncident.narrative && (
-                  <div className="bg-secondary/50 rounded-lg p-3 border border-border">
-                    <p className="text-[10px] uppercase tracking-wider text-primary mb-1 font-semibold">AI Narrative</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{selectedIncident.narrative}</p>
-                  </div>
-                )}
-                {selectedIncident.assigned_officer && (
-                  <p className="text-xs text-muted-foreground">
-                    <span className="text-foreground font-medium">Assigned:</span> {selectedIncident.assigned_officer}
-                  </p>
-                )}
+            
+            {/* Live Incident Feed - overlaid on map */}
+            <div className="absolute top-4 left-4 w-72 max-h-[calc(100%-2rem)] bg-card/95 backdrop-blur-sm border border-border rounded-xl flex flex-col overflow-hidden z-[1000] shadow-xl">
+              <div className="px-3 py-2 border-b border-border bg-card">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Live Incident Feed</h2>
               </div>
-            )}
+              <div className="flex-1 overflow-y-auto p-2">
+                <LiveFeed
+                  incidents={sortedIncidents}
+                  selectedId={selectedIncident?.id}
+                  onSelect={handleIncidentSelect}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

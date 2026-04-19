@@ -15,12 +15,33 @@ const TYPE_COLORS = {
   other: '#6b7280',
 };
 
-export default function SeverityChart({ incidents }) {
+export default function SeverityChart({ incidents, compact = false }) {
   const data = Object.entries(INCIDENT_TYPES).map(([key, config]) => ({
     type: key,
     label: config.label,
     count: incidents.filter(i => i.type === key).length,
   })).filter(d => d.count > 0).sort((a, b) => b.count - a.count);
+
+  if (compact) {
+    // Compact vertical list view for narrow sidebar
+    return (
+      <div className="space-y-1">
+        {data.slice(0, 5).map((entry) => (
+          <div key={entry.type} className="flex items-center gap-2 text-[10px]">
+            <div 
+              className="w-2 h-2 rounded-full flex-shrink-0" 
+              style={{ backgroundColor: TYPE_COLORS[entry.type] || '#6b7280' }}
+            />
+            <span className="text-muted-foreground truncate flex-1">{entry.label}</span>
+            <span className="font-mono text-foreground">{entry.count}</span>
+          </div>
+        ))}
+        {data.length === 0 && (
+          <p className="text-[10px] text-muted-foreground text-center">No data</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="h-48">

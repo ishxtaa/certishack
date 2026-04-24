@@ -6,9 +6,17 @@ import jwt
 import sqlite3
 import json
 import httpx
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Any
 from pydantic import BaseModel
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, use system env vars
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SECRET_KEY = "certis-hackathon-secret-key-change-in-production"
@@ -404,8 +412,7 @@ class LLMRequest(BaseModel):
 
 # ── Groq API Key ──────────────────────────────────────────────────────────────
 # Get your free API key at: https://console.groq.com/keys
-# Set via environment variable: GROQ_API_KEY=your_key_here
-import os
+# Add GROQ_API_KEY=your_key_here to a .env file in the backend folder
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 @app.post("/llm/invoke")

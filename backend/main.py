@@ -404,7 +404,9 @@ class LLMRequest(BaseModel):
 
 # ── Groq API Key ──────────────────────────────────────────────────────────────
 # Get your free API key at: https://console.groq.com/keys
-GROQ_API_KEY = "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"
+# Set via environment variable: GROQ_API_KEY=your_key_here
+import os
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 @app.post("/llm/invoke")
 async def invoke_llm(req: LLMRequest):

@@ -3,7 +3,11 @@
  * Handles AI chat and audio transcription
  */
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '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';
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+
+if (!GROQ_API_KEY) {
+  console.error('VITE_GROQ_API_KEY not set. Please add it to your .env file');
+}
 
 /**
  * Invoke LLM with Groq

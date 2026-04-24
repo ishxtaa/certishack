@@ -16,7 +16,7 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    pass  # python-dotenv not installed, use system env vars
+    pass  
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SECRET_KEY = "certis-hackathon-secret-key-change-in-production"
@@ -412,14 +412,14 @@ class LLMRequest(BaseModel):
 
 # ── Groq API Key ──────────────────────────────────────────────────────────────
 # Get your free API key at: https://console.groq.com/keys
-# Add GROQ_API_KEY=your_key_here to a .env file in the backend folder
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+# Reads VITE_GROQ_API_KEY from .env file
+GROQ_API_KEY = os.environ.get("VITE_GROQ_API_KEY", "")
 
 @app.post("/llm/invoke")
 async def invoke_llm(req: LLMRequest):
     """Call Groq API for LLM inference"""
     if not GROQ_API_KEY:
-        raise HTTPException(status_code=500, detail="Groq API key not configured. Please set GROQ_API_KEY in main.py")
+        raise HTTPException(status_code=500, detail="Groq API key not configured. Please set VITE_GROQ_API_KEY in .env file")
     
     system_prompt = "You are an AI assistant for airport security operations. Be concise and professional."
     if req.response_json_schema:
